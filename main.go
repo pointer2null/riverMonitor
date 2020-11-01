@@ -67,25 +67,30 @@ func readAPI(){
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return
 	}
 
-	res, getErr := client.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
+	res, err := client.Do(req)
+	if err != nil {
+		log.Error(err)
+		return
 	}
 
 	if res.Body != nil {
 		defer res.Body.Close()
 	}
 
-	data, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		log.Fatal(readErr)
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Error(err)
+		return
 	}
 
 	var result map[string]interface{}
 	json.Unmarshal([]byte(data), &result)	
+
+	// this is nasty - but for a quick hack will do.
 
 	items := result["items"].([]interface{})[0]
 
