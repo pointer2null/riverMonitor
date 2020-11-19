@@ -13,17 +13,17 @@ import (
 )
 
 var riverlevel = prometheus.NewGauge(
-    prometheus.GaugeOpts{
-        Name: "riverlevel",
-        Help: "River Level m",
-    },
+	prometheus.GaugeOpts{
+		Name: "riverlevel",
+		Help: "River Level m",
+	},
 )
 
 var riverperiod = prometheus.NewGauge(
-    prometheus.GaugeOpts{
-        Name: "period",
-        Help: "Period",
-    },
+	prometheus.GaugeOpts{
+		Name: "period",
+		Help: "Period",
+	},
 )
 
 var lastData time.Time
@@ -37,49 +37,43 @@ const url = "http://environment.data.gov.uk/flood-monitoring/id/stations/53125/m
 
 // problem is they are updated in batches - sometimes only one update in 6 or more hours
 
-
 func init() {
 	log.Infof("%v: Initialize prometheus...", time.Now().Format(time.RFC822))
 	prometheus.MustRegister(riverlevel)
 	prometheus.MustRegister(riverperiod)
 }
 
-func main (){
+func main() {
 
 	readAPI()
-	go func (){
+	go func() {
 		for range time.Tick(7 * time.Minute) {
 			readAPI()
 		}
 	}()
-		
+
 	http.Handle("/metrics", promhttp.Handler())
 	log.Info("Starting webservice...")
 	defer log.Info("Exiting...")
 	log.Fatal(http.ListenAndServe(":50000", nil))
 }
 
-func readAPI(){
-	
+func readAPI() {
+
 	client := http.Client{
-		Timeout: time.Second * 2, // Timeout after 2 seconds
+		Timeout: time.Second * 30, // Timeout after 30 seconds
 	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	
+	res, err := client.Get(url)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	res, err := client.Do(req)
-	if err != nil {
-		log.Error(err)
+	if res.Body == nil {
 		return
 	}
-
-	if res.Body != nil {
-		defer res.Body.Close()
-	}
+	defer res.Body.Close()
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -88,24 +82,25 @@ func readAPI(){
 	}
 
 	var result map[string]interface{}
-	json.Unmarshal([]byte(data), &result)	
+	json.Unmarshal([]byte(data), &result)
 
 	// this is nasty - but for a quick hack will do.
 
 	items := result["items"].([]interface{})[0]
 
 	period := items.(map[string]interface{})["period"]
-	
+
 	detail := items.(map[string]interface{})["latestReading"].(map[string]interface{})
-	
+
 	readTime, err := time.Parse("2006-01-02T15:04:05Z", detail["dateTime"].(string))
 
 	if err != nil {
 		log.Errorf("Could not parse dateTime [%v] [%v]", detail["dateTime"], err)
+		return
 	}
 
 	if readTime.After(lastData) {
-		log.Infof("River level is [%v] at [%v] with period [%v]", detail["value"], readTime .Format(time.RFC822), period)
+		log.Infof("River level is [%v] at [%v] with period [%v]", detail["value"], readTime.Format(time.RFC822), period)
 		riverlevel.Set(detail["value"].(float64))
 		riverperiod.Set(period.(float64))
 		lastData = readTime
