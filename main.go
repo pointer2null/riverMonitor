@@ -67,7 +67,7 @@ func readAPI() {
 	res, err := client.Get(url)
 	if err != nil {
 		log.Error(err)
-		riverlevel.Set(0.0)
+		riverlevel.Set(-0.1)
 		riverperiod.Set(0.0)
 		return
 	}
@@ -80,7 +80,7 @@ func readAPI() {
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Error(err)
-		riverlevel.Set(0.0)
+		riverlevel.Set(-0.1)
 		riverperiod.Set(0.0)
 		return
 	}
@@ -90,7 +90,7 @@ func readAPI() {
 
 	if err != nil {
 		log.Errorf("Could not unmarshal data [%v]", err)
-		riverlevel.Set(0.0)
+		riverlevel.Set(-0.1)
 		riverperiod.Set(0.0)
 		return
 	}
@@ -107,7 +107,7 @@ func readAPI() {
 
 	if err != nil {
 		log.Errorf("Could not parse dateTime [%v] [%v]", detail["dateTime"], err)
-		riverlevel.Set(0.0)
+		riverlevel.Set(-0.1)
 		riverperiod.Set(0.0)
 		return
 	}
@@ -122,7 +122,7 @@ func readAPI() {
 	//log.Infof("ReadTime [%v], LastRead [%v], staleTime [%v]", readTime, lastData, staleTime)
 	if lastData.Before(staleTime) {
 		log.Warnf("Stale data - last read [%v]", lastData.Format(time.RFC822))
-		riverlevel.Set(0.0)
+		riverlevel.Set(-0.1)
 		riverperiod.Set(0.0)
 	}
 }
