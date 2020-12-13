@@ -63,10 +63,12 @@ func readAPI() {
 	client := http.Client{
 		Timeout: time.Second * 30, // Timeout after 30 seconds
 	}
-	
+
 	res, err := client.Get(url)
 	if err != nil {
 		log.Error(err)
+		riverlevel.Set(0.0)
+		riverperiod.Set(0.0)
 		return
 	}
 
@@ -78,11 +80,20 @@ func readAPI() {
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Error(err)
+		riverlevel.Set(0.0)
+		riverperiod.Set(0.0)
 		return
 	}
 
 	var result map[string]interface{}
-	json.Unmarshal([]byte(data), &result)
+	err = json.Unmarshal([]byte(data), &result)
+
+	if err != nil {
+		log.Errorf("Could not unmarshal data [%v]", err)
+		riverlevel.Set(0.0)
+		riverperiod.Set(0.0)
+		return
+	}
 
 	// this is nasty - but for a quick hack will do.
 
@@ -96,6 +107,8 @@ func readAPI() {
 
 	if err != nil {
 		log.Errorf("Could not parse dateTime [%v] [%v]", detail["dateTime"], err)
+		riverlevel.Set(0.0)
+		riverperiod.Set(0.0)
 		return
 	}
 
@@ -104,5 +117,11 @@ func readAPI() {
 		riverlevel.Set(detail["value"].(float64))
 		riverperiod.Set(period.(float64))
 		lastData = readTime
+	}
+	lastWeek := time.Now().AddDate(0, 0, -6)
+	if lastData.Before(lastWeek) {
+		log.Warnf("Stale data - last read [%v]", lastData.Format(time.RFC822))
+		riverlevel.Set(0.0)
+		riverperiod.Set(0.0)
 	}
 }
