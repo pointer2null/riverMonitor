@@ -118,8 +118,9 @@ func readAPI() {
 		riverperiod.Set(period.(float64))
 		lastData = readTime
 	}
-	lastWeek := time.Now().AddDate(0, 0, -6)
-	if lastData.Before(lastWeek) {
+	staleTime := time.Now().AddDate(0, 0, -1)
+	//log.Infof("ReadTime [%v], LastRead [%v], staleTime [%v]", readTime, lastData, staleTime)
+	if lastData.Before(staleTime) {
 		log.Warnf("Stale data - last read [%v]", lastData.Format(time.RFC822))
 		riverlevel.Set(0.0)
 		riverperiod.Set(0.0)
